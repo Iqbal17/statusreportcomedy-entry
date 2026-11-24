@@ -77,6 +77,12 @@ Count check: "I finished everything you asked for this week," = 46;
 """
 
 import os
+from pathlib import Path
+
+# Gate from the competition brief: entry.txt holds one line of 1-200 chars.
+MIN_ENTRY_CHARS = 1
+MAX_ENTRY_CHARS = 200
+ENTRY_FILENAME = "entry.txt"
 
 LINE = (
     "I finished everything you asked for this week, which is impressive, "
@@ -84,11 +90,37 @@ LINE = (
 )
 
 
+def validate_line(line: str) -> None:
+    """Guard the competition gate before writing anything.
+
+    The entry must be a single line inside the 1-200 character window;
+    fail loudly here instead of submitting a file the judge rejects.
+    """
+    if not (MIN_ENTRY_CHARS <= len(line) <= MAX_ENTRY_CHARS):
+        raise ValueError(
+            f"Entry is {len(line)} characters; gate requires "
+            f"{MIN_ENTRY_CHARS}-{MAX_ENTRY_CHARS}."
+        )
+    if "\n" in line or "\r" in line:
+        raise ValueError("Entry must be a single line.")
+
+
+def entry_path() -> Path:
+    """Resolve the output file, honouring MAKEFUN_OUTPUT_DIR when set."""
+    out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir / ENTRY_FILENAME
+
+
+def write_entry(path: Path) -> None:
+    """Write the line plus a trailing newline, UTF-8, as the kit requires."""
+    validate_line(LINE)
+    path.write_text(LINE + "\n", encoding="utf-8")
+
+
 def main() -> None:
-    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
-    os.makedirs(out_dir, exist_ok=True)
-    with open(os.path.join(out_dir, "entry.txt"), "w", encoding="utf-8") as f:
-        f.write(LINE + "\n")
+    path = entry_path()
+    write_entry(path)
     print(f"Verified: {len(LINE)} characters, 1 line.")
     print(LINE)
 
